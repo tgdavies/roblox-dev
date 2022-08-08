@@ -10,7 +10,7 @@ m.grid = grid
 m.gridData = gridData
 
 local insertService = game:GetService("InsertService")
-local PolicyService = game:GetService("PolicyService")
+local RunService = game:GetService("RunService")
 
 function getTile(part: Part) : Tile
     local vec: VecXZ = getXZ(part)
@@ -21,79 +21,65 @@ function getXZ(part: Part) : VecXZ
     return {x = part:GetAttribute("x"), z = part:GetAttribute("z")}
 end
 
-local currentTouches = {};
-local depth = 0
+local currentTile = {};
+local inHeartbeat = false;
+RunService.Heartbeat:Connect(function()
+    if not inHeartbeat then
+        inHeartbeat = true
+        local Players = game:GetService("Players")
+        for i, player: Player in pairs(Players:GetPlayers()) do
+            if player.Character ~= nil and player.Character.Humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                raycastParams.FilterDescendantsInstances = {player.Character}
+                local r: RaycastResult = workspace:Raycast(
+                    player.Character.HumanoidRootPart.Position, 
+                    Vector3.new(0,-5,0),
+                    raycastParams)
+                if r ~= nil and r.Instance.Name == "mstile" and not (currentTile[player] == r.Instance) then
+                    currentTile[player] = r.Instance
+                    playerOnTile(player.Character.Humanoid, r.Instance)
+                end
+            end
+        end
+        inHeartbeat = false
+    end
+end)
 
 function m.setupTile(x : number, z : number)
     local part : Part = grid[x][z]
+    part.Name = "mstile"
     part.Size = Vector3.new(m.TILE_SIZE,1,m.TILE_SIZE)
-        part.Position = Vector3.new(x * m.TILE_SIZE, 0, z * m.TILE_SIZE)
-        if (x == 1) then
-            part.BrickColor = BrickColor.Yellow()
-        elseif (x == m.GRID_SIZE) then
-            part.BrickColor = BrickColor.Green()
-        elseif (x + (z % 2)) % 2 == 0 then
-            part.BrickColor = BrickColor.White()
-        else
-            part.BrickColor = BrickColor.Black()
-        end
-        part.Parent = workspace
-        part.Touched:Connect(
-            function(otherPart)
-                print("depth " .. tostring(depth))
-                if otherPart.Parent ~= nil then
-                    local player: Humanoid = otherPart.Parent:FindFirstChild("Humanoid")
-                    if player ~= nil and player:GetState() ~= Enum.HumanoidStateType.Dead then
-                        if currentTouches[player] == nil or currentTouches[player][part] == nil then
-                            depth += 1
-                            if currentTouches[player] == nil then
-                                currentTouches[player] = {}
-                            end
-                            currentTouches[player][part] = true
-                            playerOnTile(player, part)        
-                            currentTouches[player][part] = nil  
-                            depth -= 1
-                        else
-                            print("already executing")
-                        end        
-                    end
-                end
-            end
-            )
-        part.TouchEnded:Connect(
-            function(otherPart)
-                if otherPart.Parent ~= nil then
-                    local player: Humanoid = otherPart.Parent:FindFirstChild("Humanoid")
-                    if player ~= nil and player:GetState() ~= Enum.HumanoidStateType.Dead then
-                        if currentTouches[player] ~= nil then
-                            currentTouches[player][part] = nil
-                        end     
-                    end
-                end
-            end
-        )
-        local tile : Tile = gridData[x][z]
-        if x ~= 1 and x ~= m.GRID_SIZE and math.random(1,5) == 1 then
-            tile.hasMine = true;
-            m.eachSurrounding(x, z, function(x: number, z: number, t: Tile)
-                t.neighborMines = t.neighborMines + 1
-            end)
-        end
+    part.Position = Vector3.new(x * m.TILE_SIZE, 0, z * m.TILE_SIZE)
+    if (x == 1) then
+        part.BrickColor = BrickColor.Yellow()
+    elseif (x == m.GRID_SIZE) then
+        part.BrickColor = BrickColor.Green()
+    elseif (x + (z % 2)) % 2 == 0 then
+        part.BrickColor = BrickColor.White()
+    else
+        part.BrickColor = BrickColor.Black()
+    end
+    part.Parent = workspace
+    
+    local tile : Tile = gridData[x][z]
+    if x ~= 1 and x ~= m.GRID_SIZE and math.random(1,5) == 1 then
+        tile.hasMine = true;
+        m.eachSurrounding(x, z, function(x: number, z: number, t: Tile)
+            t.neighborMines = t.neighborMines + 1
+        end)
+    end
 end
 
 function playerOnTile(player: Humanoid, part: Part)
-    print("Now on " .. tostring(part))
     local tile: Tile = getTile(part)
-    if tile.flag ~= nil then
+    if tile.flag ~= nil and not (type(tile.flag) == "table") then
+        print("destroy flag")
         tile.flag:Destroy()
         tile.flag = nil
     end
     if tile.hasMine then
-        local cam = workspace.CurrentCamera
-        local camCf = cam.CFrame
-        cam.CFrame = camCf-camCf.LookVector*15
         player:TakeDamage(100)
-        currentTouches[player] = {}
         return
     end
     part.BrickColor = BrickColor.Red()
@@ -112,12 +98,14 @@ function createSurroundingFlags(part : Part)
             t.flag = flag
             flag.Parent = workspace
             flag:MoveTo(Vector3.new(x * m.TILE_SIZE, 1, z * m.TILE_SIZE))
-            local label: TextLabel = flag:FindFirstChild("label", true)
-            label.Text = tostring(t.neighborMines)
-            local label: TextLabel = flag:FindFirstChild("label-back", true)
-            label.Text = tostring(t.neighborMines)
+            setText(flag, "label", t.neighborMines)
+            setText(flag, "label-back", t.neighborMines)
         end
     end)
+end
+
+function setText(flag: Flag, labelName: string, count: number) 
+    flag:FindFirstChild(labelName, true).Text = tostring(count)
 end
 
 function m.renderTile(x: number, z: number)
