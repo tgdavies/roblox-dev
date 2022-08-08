@@ -8,9 +8,14 @@ local grid : {Part} = table.create(m.GRID_SIZE)
 local gridData : {Tile} = table.create(m.GRID_SIZE)
 m.grid = grid
 m.gridData = gridData
+m.gameOn = true
 
 local insertService = game:GetService("InsertService")
 local RunService = game:GetService("RunService")
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local remoteEvent: RemoteEvent = Instance.new("RemoteEvent")
+remoteEvent.Name = "GameOverEvent"
+remoteEvent.Parent = replicatedStorage
 
 function getTile(part: Part) : Tile
     local vec: VecXZ = getXZ(part)
@@ -40,7 +45,7 @@ RunService.Heartbeat:Connect(function()
                             raycastParams)
                         if r ~= nil and r.Instance.Name == "mstile" and not (currentTile[player] == r.Instance) then
                             currentTile[player] = r.Instance
-                            playerOnTile(player.Character.Humanoid, r.Instance)
+                            playerOnTile(player, r.Instance)
                         end
                     end
                 )
@@ -75,19 +80,28 @@ function m.setupTile(x : number, z : number)
     end
 end
 
-function playerOnTile(player: Humanoid, part: Part)
+function playerOnTile(player: Player, part: Part)
     local tile: Tile = getTile(part)
     if tile.flag ~= nil and not (type(tile.flag) == "table") then
         print("destroy flag")
         tile.flag:Destroy()
         tile.flag = nil
     end
-    if tile.hasMine then
-        player:TakeDamage(100)
+    if tile.hasMine and m.gameOn then
+        player.Character.Humanoid:TakeDamage(100)
         return
     end
-    part.BrickColor = BrickColor.Red()
-    createSurroundingFlags(part)
+    local vecXz: VecXZ = getXZ(part)
+    if vecXz.x > 1 and vecXz.x < m.GRID_SIZE then
+        part.BrickColor = player.TeamColor
+    elseif vecXz.x == m.GRID_SIZE and m.gameOn then
+        print("game over")
+        m.gameOn = false;
+        remoteEvent:FireAllClients("GameOver", player)
+    end
+    if m.gameOn then
+        createSurroundingFlags(part)
+    end
 end
 
 function createSurroundingFlags(part : Part)
