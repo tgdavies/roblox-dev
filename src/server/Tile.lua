@@ -21,7 +21,7 @@ function getXZ(part: Part) : VecXZ
     return {x = part:GetAttribute("x"), z = part:GetAttribute("z")}
 end
 
-local currentPart = nil;
+local currentTouches = {};
 local depth = 0
 
 function m.setupTile(x : number, z : number)
@@ -40,24 +40,38 @@ function m.setupTile(x : number, z : number)
         part.Parent = workspace
         part.Touched:Connect(
             function(otherPart)
-                if depth ~= 0 then
-                    print("depth " .. tostring(depth))
-                end
-                depth += 1
-                if part ~= currentPart then
-                    if otherPart.Parent ~= nil then
-                        local player: Humanoid = otherPart.Parent:FindFirstChild("Humanoid")
-                        if player ~= nil and player:GetState() ~= Enum.HumanoidStateType.Dead then
-                            currentPart = part
-                            playerOnTile(player, part)
-                        end
+                print("depth " .. tostring(depth))
+                if otherPart.Parent ~= nil then
+                    local player: Humanoid = otherPart.Parent:FindFirstChild("Humanoid")
+                    if player ~= nil and player:GetState() ~= Enum.HumanoidStateType.Dead then
+                        if currentTouches[player] == nil or currentTouches[player][part] == nil then
+                            depth += 1
+                            if currentTouches[player] == nil then
+                                currentTouches[player] = {}
+                            end
+                            currentTouches[player][part] = true
+                            playerOnTile(player, part)        
+                            currentTouches[player][part] = nil  
+                            depth -= 1
+                        else
+                            print("already executing")
+                        end        
                     end
-                else
-                    -- print("Already on " .. tostring(currentPart))
                 end
-                depth -= 1
             end
             )
+        part.TouchEnded:Connect(
+            function(otherPart)
+                if otherPart.Parent ~= nil then
+                    local player: Humanoid = otherPart.Parent:FindFirstChild("Humanoid")
+                    if player ~= nil and player:GetState() ~= Enum.HumanoidStateType.Dead then
+                        if currentTouches[player] ~= nil then
+                            currentTouches[player][part] = nil
+                        end     
+                    end
+                end
+            end
+        )
         local tile : Tile = gridData[x][z]
         if x ~= 1 and x ~= m.GRID_SIZE and math.random(1,5) == 1 then
             tile.hasMine = true;
@@ -79,7 +93,7 @@ function playerOnTile(player: Humanoid, part: Part)
         local camCf = cam.CFrame
         cam.CFrame = camCf-camCf.LookVector*15
         player:TakeDamage(100)
-        currentPart = nil
+        currentTouches[player] = {}
         return
     end
     part.BrickColor = BrickColor.Red()
@@ -92,6 +106,9 @@ function createSurroundingFlags(part : Part)
         if t.flag == nil and x ~= 1 and x ~= m.GRID_SIZE then
             t.flag = {}
             local flag : Model = insertService:LoadAsset(10497015819)
+            -- for i,p: Part in flag:GetDescendants() do
+            --     p.CanTouch = false
+            -- end
             t.flag = flag
             flag.Parent = workspace
             flag:MoveTo(Vector3.new(x * m.TILE_SIZE, 1, z * m.TILE_SIZE))
