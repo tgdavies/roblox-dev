@@ -66,5 +66,10 @@ playersService.PlayerAdded:Connect(
 
 playersService.PlayerRemoving:Connect(
     function(player: Player)
+        for i, slot in ipairs(availableTeams) do
+            if slot.team == player.Team then
+                slot.inUse = false
+            end
+        end
     end
 )
