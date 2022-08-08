@@ -2,7 +2,7 @@
 export type Tile = {hasMine: boolean, neighborMines: number, flag: Model}
 export type VecXZ = {x: number, z: number}
 local m = {}
-m.TILE_SIZE = 8
+m.TILE_SIZE = 10
 m.GRID_SIZE = 10
 local grid : {Part} = table.create(m.GRID_SIZE)
 local gridData : {Tile} = table.create(m.GRID_SIZE)
@@ -29,17 +29,21 @@ RunService.Heartbeat:Connect(function()
         local Players = game:GetService("Players")
         for i, player: Player in pairs(Players:GetPlayers()) do
             if player.Character ~= nil and player.Character.Humanoid:GetState() ~= Enum.HumanoidStateType.Dead then
-                local raycastParams = RaycastParams.new()
-                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-                raycastParams.FilterDescendantsInstances = {player.Character}
-                local r: RaycastResult = workspace:Raycast(
-                    player.Character.HumanoidRootPart.Position, 
-                    Vector3.new(0,-5,0),
-                    raycastParams)
-                if r ~= nil and r.Instance.Name == "mstile" and not (currentTile[player] == r.Instance) then
-                    currentTile[player] = r.Instance
-                    playerOnTile(player.Character.Humanoid, r.Instance)
-                end
+                task.spawn(
+                    function()
+                        local raycastParams = RaycastParams.new()
+                        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                        raycastParams.FilterDescendantsInstances = {player.Character}
+                        local r: RaycastResult = workspace:Raycast(
+                            player.Character.HumanoidRootPart.Position, 
+                            Vector3.new(0,-5,0),
+                            raycastParams)
+                        if r ~= nil and r.Instance.Name == "mstile" and not (currentTile[player] == r.Instance) then
+                            currentTile[player] = r.Instance
+                            playerOnTile(player.Character.Humanoid, r.Instance)
+                        end
+                    end
+                )
             end
         end
         inHeartbeat = false
