@@ -4,7 +4,7 @@ local tile = require(script.Tile)
 type TeamSlot = {colour: BrickColor, inUse: boolean, team: Team}
 local teamService = game:GetService("Teams")
 local availableTeams: {TeamSlot} = {
-    {colour = BrickColor.new("Really red"), inUse = false},
+    {colour = BrickColor.new("Really red"), inUse = false, team = nil},
     {colour = BrickColor.new("Dark blue"), inUse = false},
     {colour = BrickColor.new("Pink"), inUse = false},
     {colour = BrickColor.new("Neon orange"), inUse = false},
@@ -67,7 +67,6 @@ tile.eachCoordinate(tile.renderTile)
 local playersService = game:GetService("Players")
 playersService.PlayerAdded:Connect(
     function(player: Player)
-        print("connected")
         local teams = teamService:GetTeams()
         local newSlot = nil
         for i, slot in ipairs(availableTeams) do
@@ -80,7 +79,6 @@ playersService.PlayerAdded:Connect(
         if newSlot == nil then
             player:Kick("Too many players. Sorry!")
         else
-            print("Player " .. player.Name .. " joined " .. newSlot.team.TeamColor.Name)
             player.Team = newSlot.team
             player.TeamColor = newSlot.colour
         end

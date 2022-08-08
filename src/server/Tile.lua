@@ -1,11 +1,11 @@
 
-export type Tile = {hasMine: boolean, neighborMines: number, flag: Model}
+export type Tile = {hasMine: boolean, neighborMines: number, flag: Model | nil}
 export type VecXZ = {x: number, z: number}
 local m = {}
 m.TILE_SIZE = 10
 m.GRID_SIZE = 10
-local grid : {Part} = table.create(m.GRID_SIZE)
-local gridData : {Tile} = table.create(m.GRID_SIZE)
+local grid : {{Part}} = table.create(m.GRID_SIZE)
+local gridData : {{Tile}} = table.create(m.GRID_SIZE)
 m.grid = grid
 m.gridData = gridData
 m.gameOn = true
@@ -82,8 +82,7 @@ end
 
 function playerOnTile(player: Player, part: Part)
     local tile: Tile = getTile(part)
-    if tile.flag ~= nil and not (type(tile.flag) == "table") then
-        print("destroy flag")
+    if tile.flag ~= nil then
         tile.flag:Destroy()
         tile.flag = nil
     end
@@ -95,7 +94,6 @@ function playerOnTile(player: Player, part: Part)
     if vecXz.x > 1 and vecXz.x < m.GRID_SIZE then
         part.BrickColor = player.TeamColor
     elseif vecXz.x == m.GRID_SIZE and m.gameOn then
-        print("game over")
         m.gameOn = false;
         remoteEvent:FireAllClients("GameOver", player)
     end
@@ -108,7 +106,6 @@ function createSurroundingFlags(part : Part)
     local vec: VecXZ = getXZ(part)
     m.eachSurrounding(vec.x, vec.z, function(x: number, z:number, t: Tile)
         if t.flag == nil and x ~= 1 and x ~= m.GRID_SIZE then
-            t.flag = {}
             local flag : Model = insertService:LoadAsset(10497015819)
             -- for i,p: Part in flag:GetDescendants() do
             --     p.CanTouch = false
@@ -122,8 +119,8 @@ function createSurroundingFlags(part : Part)
     end)
 end
 
-function setText(flag: Flag, labelName: string, count: number) 
-    flag:FindFirstChild(labelName, true).Text = tostring(count)
+function setText(flag: Model, labelName: string, count: number)
+    (flag:FindFirstChild(labelName, true) :: TextLabel).Text = tostring(count)
 end
 
 function m.renderTile(x: number, z: number)

@@ -4,10 +4,8 @@ local playerGui: PlayerGui = game:GetService('Players').LocalPlayer:WaitForChild
 
 remoteEvent.OnClientEvent:Connect(
     function(code: string, player:Player)
-        print("event fired")
         local label:TextLabel = playerGui:FindFirstChild("gameOverLabel", true)
         label.Text = "Game Over! " .. player.Name .. " was the winner!"
         label.Visible = true
     end
 )
-print("event connected to client")
