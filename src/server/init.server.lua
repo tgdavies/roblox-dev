@@ -1,12 +1,15 @@
 local Teams = game:GetService("Teams")
 local tile = require(script.Tile)
-local spawnLocation: SpawnLocation = Instance.new("SpawnLocation")
-spawnLocation.Parent = workspace
-spawnLocation.CFrame = CFrame.new(
-    Vector3.new(0, 0, tile.TILE_SIZE * tile.GRID_SIZE/2.0),
-    Vector3.new(tile.TILE_SIZE, 5, tile.TILE_SIZE * tile.GRID_SIZE/2.0)
-)
-spawnLocation.Duration = 0
+for i = 1,6 do
+    local spawnLocation: SpawnLocation = Instance.new("SpawnLocation")
+    spawnLocation.Parent = workspace
+    spawnLocation.CFrame = CFrame.new(
+        Vector3.new(0, 0, tile.TILE_SIZE * (tile.GRID_SIZE/2.0-3+i)),
+        Vector3.new(tile.TILE_SIZE, 5, tile.TILE_SIZE * (tile.GRID_SIZE/2.0-3+i))
+    )  
+    spawnLocation.Duration = 0
+end
+
 tile.eachCoordinate(
 function(x, z)
     if (z == 1) then
